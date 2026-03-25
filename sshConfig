@@ -1,0 +1,10 @@
+Host remote
+    HostName ******
+    User cloud-user
+    IdentityFile *****
+
+Host vm
+    HostName localhost
+    User core
+    IdentityFile /home/cloud-user/.crc/machines/crc/id_ed25519
+    ProxyJump remote

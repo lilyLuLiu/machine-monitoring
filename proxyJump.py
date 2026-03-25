@@ -1,7 +1,7 @@
 import paramiko
 import tempfile
 import time
-
+import subprocess
 
 class SSHViaJump:
     def __init__(
@@ -113,26 +113,6 @@ class SSHViaJump:
         self.jump_client = None
         self.channel = None
 
-"""
-client = SSHViaJump(
-    jump_host = "rhel-crcqe.tpb.lab.eng.brq.redhat.com",
-    jump_user = "cloud-user",
-    jump_key_path = "/Users/lul/Documents/code/my-qe-platform/qe-platform/config/private/hosts/rhel-1-brno-key",
-
-    remote_host = "localhost",
-    remote_user = "core",
-    remote_key_path_on_jump = "/home/cloud-user/.crc/machines/crc/id_ed25519",
-)
-
-out, err = client.run("hostname && whoami")
-print("OUT:", out)
-print("ERR:", err)
-
-out, err = client.run("df -h")
-print(out)
-
-client.close()
-"""
 
 
 class SSHDirect:
@@ -177,6 +157,28 @@ class SSHDirect:
         if self.client:
             self.client.close()
         self.client = None
+
+
+
+
+class LocalShell:
+    def run(self, cmd):
+        try:
+            process = subprocess.Popen(
+                cmd,
+                shell=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            stdout, stderr = process.communicate()
+            return None, stdout, stderr
+        except Exception as e:
+            return None, "", str(e)
+
+    def close(self):
+        # No-op for local shell
+        pass
 
 
 def parse_ssh_config(config_path):

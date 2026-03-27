@@ -1,12 +1,12 @@
 import time
 from proxyJump import SSHViaJump, SSHDirect, LocalShell, parse_ssh_config
 
-def setup_client(MONITOR_REMOTE, MONITOR_REMOTE_VM, ssh_config_path="sshConfig"):
+def setup_client(MONITOR_REMOTE, MONITOR_REMOTE_JUMP, ssh_config_path="sshConfig"):
     """Sets up the client for monitoring (remote or local)."""
     if MONITOR_REMOTE:
         ssh_config = parse_ssh_config(ssh_config_path)
         remote_config = ssh_config.get('remote', {})
-        if MONITOR_REMOTE_VM:
+        if MONITOR_REMOTE_JUMP:
             vm_config = ssh_config.get('vm', {})
             client = SSHViaJump(
                 jump_host=remote_config.get('HostName'),
@@ -106,3 +106,90 @@ class MetricsCollector:
             data['load15'].append(load_data['load15'])
         if self.config.get('MONITOR_PROCESSES'):
             data['processes'].append(self.get_processes())
+
+
+import matplotlib.pyplot as plt
+from IPython.display import clear_output
+
+def draw_plots(times, data, config, host_alias):
+    clear_output(wait=True)
+    
+    enabled_metrics = [k for k, v in config.items() if k.startswith('MONITOR_') and v]
+    n_plots = len(enabled_metrics)
+    if n_plots == 0:
+        print("No monitoring metrics enabled. Please modify the configuration.")
+        return
+
+    fig = plt.figure(figsize=(14, 2.5 * n_plots))
+    gs = fig.add_gridspec(n_plots, 1, hspace=0.5)
+    plot_idx = 0
+    
+    if config.get('MONITOR_CPU'):
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['cpu'], 'r-', linewidth=1.5)
+        ax.set_ylabel('CPU (%)')
+        ax.set_ylim(0, 100)
+        ax.grid(True)
+        ax.set_title('CPU Usage')
+        plot_idx += 1
+        
+    if config.get('MONITOR_MEM'):
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['mem'], 'g-', linewidth=1.5)
+        ax.set_ylabel('Memory (%)')
+        ax.set_ylim(0, 100)
+        ax.grid(True)
+        ax.set_title('Memory Usage')
+        plot_idx += 1
+
+    if config.get('MONITOR_DISK_USAGE'):
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['disk_usage'], 'b-', linewidth=1.5)
+        ax.set_ylabel('Disk Usage (%)')
+        ax.set_ylim(0, 100)
+        ax.grid(True)
+        ax.set_title('Root Disk Usage')
+        plot_idx += 1
+
+    if config.get('MONITOR_DISK_IO'):
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['disk_io'], 'orange', linewidth=1.5)
+        ax.set_ylabel('Disk I/O %util')
+        ax.set_ylim(0, 100)
+        ax.grid(True)
+        ax.set_title(f'Disk I/O ({config["DISK_DEVICE"]})')
+        plot_idx += 1
+
+    if config.get('MONITOR_NETWORK') and len(data['net_sent']) > 0:
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['net_sent'], 'c-', label='Sent', linewidth=1.5)
+        ax.plot(times, data['net_recv'], 'm-', label='Received', linewidth=1.5)
+        ax.set_ylabel('Network (bytes/s)')
+        ax.legend()
+        ax.grid(True)
+        ax.set_title(f'Network Traffic ({config["NET_INTERFACE"]})')
+        plot_idx += 1
+
+    if config.get('MONITOR_LOAD'):
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['load1'], label='1 min', linewidth=1.5)
+        ax.plot(times, data['load5'], label='5 min', linewidth=1.5)
+        ax.plot(times, data['load15'], label='15 min', linewidth=1.5)
+        ax.set_ylabel('Load Average')
+        ax.legend()
+        ax.grid(True)
+        ax.set_title('System Load')
+        plot_idx += 1
+
+    if config.get('MONITOR_PROCESSES'):
+        ax = fig.add_subplot(gs[plot_idx])
+        ax.plot(times, data['processes'], 'purple', linewidth=1.5)
+        ax.set_ylabel('Process Count')
+        ax.grid(True)
+        ax.set_title('Total Processes')
+        plot_idx += 1
+    
+    fig.supxlabel('Time (seconds)')
+    fig.suptitle(f'Performance Monitor - {host_alias}', fontsize=16)
+    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.show()

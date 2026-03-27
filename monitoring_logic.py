@@ -1,29 +1,29 @@
 import time
-from proxyJump import SSHViaJump, SSHDirect, LocalShell, parse_ssh_config
+from proxyJump import SSHViaJump, SSHDirect, LocalShell
 
-def setup_client(MONITOR_REMOTE, MONITOR_REMOTE_JUMP, ssh_config_path="sshConfig"):
+def setup_client(MONITOR_REMOTE, MONITOR_REMOTE_JUMP):
     """Sets up the client for monitoring (remote or local)."""
-    if MONITOR_REMOTE:
-        ssh_config = parse_ssh_config(ssh_config_path)
-        remote_config = ssh_config.get('remote', {})
-        if MONITOR_REMOTE_JUMP:
-            vm_config = ssh_config.get('vm', {})
+    if MONITOR_REMOTE.get('enabled'):
+        if MONITOR_REMOTE_JUMP.get('enabled'):
             client = SSHViaJump(
-                jump_host=remote_config.get('HostName'),
-                jump_user=remote_config.get('User'),
-                jump_key_path=remote_config.get('IdentityFile'),
-                remote_host=vm_config.get('HostName'),
-                remote_user=vm_config.get('User'),
-                remote_key_path_on_jump=vm_config.get('IdentityFile'),
+                remote_host=MONITOR_REMOTE.get('HostName'),
+                remote_user=MONITOR_REMOTE.get('User'),
+                remote_key_path_on_jump=MONITOR_REMOTE.get('IdentityFile'),
+                remote_port=MONITOR_REMOTE.get('Port', 22),
+                jump_host=MONITOR_REMOTE_JUMP.get('HostName'),
+                jump_user=MONITOR_REMOTE_JUMP.get('User'),
+                jump_key_path=MONITOR_REMOTE_JUMP.get('IdentityFile'),
+                jump_port=MONITOR_REMOTE_JUMP.get('Port', 22),
             )
-            HOST_ALIAS = "VM in " + remote_config.get('HostName')
+            HOST_ALIAS = MONITOR_REMOTE.get('HostName') + " (via " + MONITOR_REMOTE_JUMP.get('HostName') + ")"
         else:
             client = SSHDirect(
-                host=remote_config.get('HostName'),
-                user=remote_config.get('User'),
-                key_path=remote_config.get('IdentityFile'),
+                host=MONITOR_REMOTE.get('HostName'),
+                user=MONITOR_REMOTE.get('User'),
+                key_path=MONITOR_REMOTE.get('IdentityFile'),
+                port=MONITOR_REMOTE.get('Port', 22),
             )
-            HOST_ALIAS = remote_config.get('HostName', 'RemoteHost')
+            HOST_ALIAS = MONITOR_REMOTE.get('HostName', 'RemoteHost')
     else:
         client = LocalShell()
         HOST_ALIAS = "localhost"

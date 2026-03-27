@@ -12,16 +12,20 @@ class SSHViaJump:
         remote_host,
         remote_user,
         remote_key_path_on_jump,
+        jump_port=22,
+        remote_port=22,
         retries=20,
         delay=10,
     ):
         self.jump_host = jump_host
         self.jump_user = jump_user
         self.jump_key_path = jump_key_path
+        self.jump_port = jump_port
 
         self.remote_host = remote_host
         self.remote_user = remote_user
         self.remote_key_path_on_jump = remote_key_path_on_jump
+        self.remote_port = remote_port
 
         self.retries = retries
         self.delay = delay
@@ -45,6 +49,7 @@ class SSHViaJump:
 
                 self.jump_client.connect(
                     hostname=self.jump_host,
+                    port=self.jump_port,
                     username=self.jump_user,
                     key_filename=self.jump_key_path,
                 )
@@ -64,7 +69,7 @@ class SSHViaJump:
 
                 self.channel = transport.open_channel(
                     kind="direct-tcpip",
-                    dest_addr=(self.remote_host, 2222),
+                    dest_addr=(self.remote_host, self.remote_port),
                     src_addr=("127.0.0.1", 0),
                 )
 
